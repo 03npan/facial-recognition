@@ -61,7 +61,7 @@ python3 train_model.py
 python3 recognize_test.py
 # Run the pipeline on a live video feed and visualize results.
 # You have to code this, building on the previous interns' work.
-python3 recognize_camera.py
+python3 face_detect.py
 
 training pipeline:
 For each image in the training dataset, detect face in image with M1 and get bounding box.
