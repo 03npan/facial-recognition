@@ -8,7 +8,7 @@ cd facial-recognition
 
 # Assuming Ubuntu or Debian
 sudo apt-get install python3-pip
-pip3 install imutils numpy opencv-python torch Pillow scikit-learn progressbar2 amcrest
+pip3 install --no-cache-dir -r requirements.txt
 
 ================
 Camera Setup
