@@ -1,9 +1,7 @@
-# import the necessary packages
 from sklearn.preprocessing import LabelEncoder
 from sklearn.svm import SVC
 import argparse
 import pickle
-#from sklearn.tree import DecisionTreeClassifier
 
 
 # construct the argument parser and parse the arguments
@@ -33,10 +31,6 @@ labels = le.fit_transform(data["names"])
 print("[INFO] training model...")
 recognizer = SVC(C=10, kernel="rbf", probability=True, gamma="scale")
 recognizer.fit(data["embeddings"], labels)
-
-# Train a CART model on the data
-#recognizer = DecisionTreeClassifier(min_samples_leaf=128)
-#recognizer.fit(data["embeddings"], labels)
 
 # write the actual face recognition model to disk
 f = open(args["recognizer"], "wb")

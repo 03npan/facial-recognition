@@ -6,3 +6,4 @@ Pillow
 scikit-learn
 progressbar2
 amcrest
+dlib

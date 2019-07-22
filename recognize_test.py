@@ -8,7 +8,6 @@ import os
 import glob
 import torch
 import net
-import time
 import dlib
 from align_dlib import AlignDlib
 
@@ -101,18 +100,12 @@ def main():
 def create_face_blob(image_file, face_cascade, detector, face_aligner):
     # load the image, resize it to have a width of 600 pixels (while
     # maintaining the aspect ratio), and then grab the image dimensions
-    start = time.time()
 
     image = cv2.imread(image_file)
-    end = time.time()
     image = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
     image = imutils.resize(image, width=600)
     (ih, iw) = image.shape[:2]
 
-    end = time.time()
-    print("loading: " + str(end - start))
-
-    start = time.time()
     # construct a blob from the image
     imageBlob = cv2.dnn.blobFromImage(
         cv2.resize(image, (300, 300)), 1.0, (300, 300),
@@ -122,8 +115,6 @@ def create_face_blob(image_file, face_cascade, detector, face_aligner):
     # faces in the input image
     detector.setInput(imageBlob)
     detections = detector.forward()
-    end = time.time()
-    print("caffe: " + str(end - start))
 
     # loop over the detections
     # only first for now
@@ -142,6 +133,7 @@ def create_face_blob(image_file, face_cascade, detector, face_aligner):
             if startX < 0 or startY < 0 or endX > iw or endY > ih:
                 return None
 
+            # align the face
             rect = dlib.rectangle(startX, startY, endX, endY)
             face = face_aligner.align(
                     96,
@@ -149,10 +141,6 @@ def create_face_blob(image_file, face_cascade, detector, face_aligner):
                     rect,
                     landmarkIndices=AlignDlib.OUTER_EYES_AND_NOSE
             )
-
-            # extract the face ROI
-            #face = image[startY:endY, startX:endX]
-            (fH, fW) = face.shape[:2]
 
             # construct a blob for the face ROI, then pass the blob
             # through our face embedding model to obtain the 128-d

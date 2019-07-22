@@ -79,7 +79,6 @@ for (i, imagePath) in enumerate(imagePaths):
     image = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
     image = imutils.resize(image, width=600)
     (ih, iw) = image.shape[:2]
-    print(ih, iw)
     imageBlob = cv2.dnn.blobFromImage(
             cv2.resize(image, (300, 300)), 1.0, (300, 300),
             (104.0, 177.0, 123.0), swapRB=False, crop=False)
@@ -88,56 +87,52 @@ for (i, imagePath) in enumerate(imagePaths):
     detector.setInput(imageBlob)
     detections = detector.forward()
 
-    # loop over the detections
-    # only first for now
-    for i in range(1): #, detections.shape[2]):
-        # extract the confidence (i.e., probability) associated with the
-        # prediction
-        confidence = detections[0, 0, i, 2]
+    # analyze the first detection, since we set up the dataset to have
+    # only one face per image
+    # extract the confidence (i.e., probability) associated with the
+    # prediction
+    confidence = detections[0, 0, 0, 2]
 
-        min_confidence = 0
-        # filter out weak detections
-        if confidence > min_confidence:
-            # compute the (x, y)-coordinates of the bounding box for the
-            # face
-            box = detections[0, 0, i, 3:7] * np.array([iw, ih, iw, ih])
-            (startX, startY, endX, endY) = box.astype("int")
-            if startX < 0 or startY < 0 or endX > iw or endY > ih:
-                continue
-            rect = dlib.rectangle(startX, startY, endX, endY)
-            face = face_aligner.align(
-                    96,
-                    image,
-                    rect,
-                    landmarkIndices=AlignDlib.OUTER_EYES_AND_NOSE
-            )
-            # extract the face ROI
-            #face = image[startY:endY, startX:endX]
-            (fH, fW) = face.shape[:2]
+    min_confidence = 0
+    # filter out weak detections
+    if confidence > min_confidence:
+        # compute the (x, y)-coordinates of the bounding box for the
+        # face
+        box = detections[0, 0, 0, 3:7] * np.array([iw, ih, iw, ih])
+        (startX, startY, endX, endY) = box.astype("int")
+        if startX < 0 or startY < 0 or endX > iw or endY > ih:
+            continue
+        rect = dlib.rectangle(startX, startY, endX, endY)
+        face = face_aligner.align(
+                96,
+                image,
+                rect,
+                landmarkIndices=AlignDlib.OUTER_EYES_AND_NOSE
+        )
 
-            # construct a blob for the face ROI, then pass the blob
-            # through our face embedding model to obtain the 128-d
-            # quantification of the face
-            faceBlob = cv2.dnn.blobFromImage(face, 1.0 / 255,
-                                             (96, 96), (0, 0, 0), swapRB=True, crop=False)
-            inputs = torch.from_numpy(faceBlob).to(device)
-            vec = embedder.forward(inputs).cpu().numpy()
+        # construct a blob for the face ROI, then pass the blob
+        # through our face embedding model to obtain the 128-d
+        # quantification of the face
+        faceBlob = cv2.dnn.blobFromImage(face, 1.0 / 255,
+                                         (96, 96), (0, 0, 0), swapRB=True, crop=False)
+        inputs = torch.from_numpy(faceBlob).to(device)
+        vec = embedder.forward(inputs).cpu().numpy()
 
-            # add the name of the person + corresponding face
-            # embedding to their respective lists
-            knownNames.append(name)
-            knownEmbeddings.append(vec.flatten())
-            total += 1
+        # add the name of the person + corresponding face
+        # embedding to their respective lists
+        knownNames.append(name)
+        knownEmbeddings.append(vec.flatten())
+        total += 1
 
 
-            if args['visualize']:
-                draw_image = image.copy()
-                cv2.rectangle(draw_image, (startX, startY), (endX, endY), (255,255,0), 2)
-                # show the output image
-                cv2.imshow("Image", face) #draw_image)
-                key = cv2.waitKey(0)
-                if key == ord('q'):
-                    sys.exit(0)
+        if args['visualize']:
+            draw_image = image.copy()
+            cv2.rectangle(draw_image, (startX, startY), (endX, endY), (255,255,0), 2)
+            # show the output image
+            cv2.imshow("Image", face) #draw_image)
+            key = cv2.waitKey(0)
+            if key == ord('q'):
+                sys.exit(0)
 
 
 
