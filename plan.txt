@@ -63,23 +63,16 @@ python3 recognize_test.py
 # You have to code this, building on the previous interns' work.
 python3 face_detect.py
 
-training pipeline:
-For each image in the training dataset, detect face in image with M1 and get bounding box.
-Crop the image to the face and generate the face embeddings with M2.
-Add the face embedding to a list of vectors and the person's name to a list of labels. 
-Fit a machine learning model to the face embeddings and labels.
+Training Pipeline:
+For each image in the training dataset, detect face in image with M1 and get bounding box. Crop the image to the face, align it with dlib, and generate the face embeddings with M2. Add the face embedding to a list of vectors and the person's name to a list of labels. Fit a machine learning model to the face embeddings and labels.
 
-testing pipeline:
-For each image in the testing dataset, detect face(s) in image with M1 and get their bounding boxes.
-For each face, crop the image to the face, generate the face embeddings with M2, and match the face embeddings to a person's name with M3.
-Output the name of the person detected in the image and the bounding boxes of their face.
-compute how many of the faces were predicted correctly by comparing the outputs to the labels
+Testing Pipeline:
+For each image in the testing dataset, detect face(s) in image with M1 and get their bounding boxes. For each face, crop the image to the face, align it with dlib, generate the face embeddings with M2, and match the face embeddings to a person's name with M3. Output the name of the person detected in the image and the bounding boxes of their face. Compute how many of the faces were predicted correctly by comparing the outputs to the labels.
 
-production pipeline:
-When a new image arrives from the video cameras that might have a face, transfer it to the DGX and use M2 to find faces, if any exist, and if so, run M3 on the cropped image to recognize the names corresponding to the faces. Show a feed displaying the bounding boxes, predicted names, and confidences with each frame.
-To increase the fps, batching may be implemented, so that the models operate on a batch of images and the display is delayed a few frames.
+Production Pipeline:
+When a new image arrives from the video cameras that might have a face, transfer it to the DGX and use M2 to find faces, if any exist, and if so, run M3 on the cropped image to recognize the names corresponding to the faces. Show a feed displaying the bounding boxes, predicted names, and confidences with each frame. To increase the fps, batching may be implemented, so that the models operate on a batch of images and the display is delayed a few frames.
 
-updating dataset:
+Updating Dataset:
 Each time a new person is added to the face recognition system, we need to run M1 and M2 on the new images then retrain M3.
 
 
