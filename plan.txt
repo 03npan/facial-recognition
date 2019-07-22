@@ -1,43 +1,14 @@
-
-
-input
-@152x152x3 Pixels x RGB Frontalization
-32x11x11x3 @142x142 Conv
-ReLU
-32x3x3x32 @71x71 Max-Pooling
-ReLU
-16x9x9x32 @63x63 Conv 
-ReLU
-16x9x9x16 @55x55 Locally-connected
-ReLU
-16x7x7x16 @25x25 Locally-connected
-ReLU
-16x5x5x16 @21x21 Locally-connected
-ReLU
-Fully-connected
-ReLU
-Dropout
-Fully-connected (output)
-
 ================
 Preliminary Setup
 
 Open a terminal and clone the repository.
 
-git clone TODO
-cd TODO
+git clone https://github.com/stevengriffin/facial-recognition.git
+cd facial-recognition
 
-sudo apt-get install python-pip
-pip install virtualenvwrapper
-export WORKON_HOME=~/.virtualenvs
-mkdir -p $WORKON_HOME
-source $(which virtualenvwrapper.sh)
-mkvirtualenv face
-pip install imutils numpy opencv-python torch Pillow scikit-learn progressbar2 amcrest
-
-Whenever you open a new terminal to work on the project, you'll need to switch to your virtual environment by executing:
-
-workon face
+# Assuming Ubuntu or Debian
+sudo apt-get install python3-pip
+pip3 install imutils numpy opencv-python torch Pillow scikit-learn progressbar2 amcrest
 
 =================
 Camera Setup
@@ -71,7 +42,7 @@ dataset/
         00003.jpg
         ...
 
-You can look at https://www.pyimagesearch.com/2018/06/11/how-to-build-a-custom-face-recognition-dataset/ for inspiration, but you should record footage from the 1080p Amcrest camera rather than a webcam.
+You can look at https://www.pyimagesearch.com/2018/06/11/how-to-build-a-custom-face-recognition-dataset/ for inspiration.
 
 ==========
 

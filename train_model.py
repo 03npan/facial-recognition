@@ -10,7 +10,7 @@ import pickle
 ap = argparse.ArgumentParser()
 ap.add_argument("-e", "--embeddings",
 	help="path to serialized db of facial embeddings",
-        default="output/embeddings_torch.pickle")
+        default="output/embeddings.pickle")
 ap.add_argument("-r", "--recognizer",
         help="path to output model trained to recognize faces",
         default="output/recognizer.pickle")
