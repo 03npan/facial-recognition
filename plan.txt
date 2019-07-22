@@ -10,19 +10,19 @@ cd facial-recognition
 sudo apt-get install python3-pip
 pip3 install imutils numpy opencv-python torch Pillow scikit-learn progressbar2 amcrest
 
-=================
+================
 Camera Setup
 
 Power and connect the cameras with ethernet to the DGX station using POE injectors. 
 
 Find the IP address, port, username, and password of the cameras. Learn to connect to the cameras, change their pan and tilt, save snapshots, and record streams with a Python script by reading https://python-amcrest.readthedocs.io/.
 
-=================
+================
 Data Collection
 
-Build a dataset of surveillance footage of yourselves. Record footage of each person with a variety of angles and lighting conditions. Organize it into a dataset with the following directory structure.
+Build a dataset of images of yourselves. Take pictures of each person with a variety of angles and lighting conditions. You can use the Amcrest cameras or your cell phones. Organize it into a dataset with the following directory structure.
 
-dataset/
+unprocessed_dataset/
     name1/
         00000.jpg
         00001.jpg
@@ -44,52 +44,42 @@ dataset/
 
 You can look at https://www.pyimagesearch.com/2018/06/11/how-to-build-a-custom-face-recognition-dataset/ for inspiration.
 
-==========
+================
+Pipeline explanation
 
 M1: face detector (pretrained neural network)
 
 M2: face embeddings generator (pretrained neural network)
 
-M3: face embeddings -> labels classifier (build yourself, many options: support vector machine, decision tree, k-nearest neighbors, neural network)
+M3: face embeddings -> labels classifier (train yourself, many options: support vector machine, decision tree, k-nearest neighbors, neural network)
 
-Generate face embeddings with OpenFace's neural network.
-Run extract_embeddings.py --dataset path/to/your/dataset 
-
-720p vs. 1080p
-Record time to process results
-
-
-
-
-
-
-
-
-
-
-
-
-Task 1: Use a pretrained network for generating face embeddings such as those provided in https://github.com/davidsandberg/facenet or https://github.com/cmusatyalab/openface and a pretrained network for detecting faces such as the ones used in OpenCV.
-
+# Generate face embeddings with OpenFace's neural network.
+python3 extract_embeddings.py
+# Train the model.
+python3 train_model.py
+# Test the model.
+python3 recognize_test.py
+# Run the pipeline on a live video feed and visualize results.
+# You have to code this, building on the previous interns' work.
+python3 recognize_camera.py
 
 training pipeline:
-for each image in the training dataset, detect face in image with M1 and get bounding box.
-crop the image to the face and generate the face embeddings with M2. Add the face embedding to a list of vectors and the person's name to a list of labels. 
-fit a machine learning model to the face embeddings and labels.
+For each image in the training dataset, detect face in image with M1 and get bounding box.
+Crop the image to the face and generate the face embeddings with M2.
+Add the face embedding to a list of vectors and the person's name to a list of labels. 
+Fit a machine learning model to the face embeddings and labels.
 
 testing pipeline:
-for each image in the testing dataset, detect face(s) in image with M1 and get their bounding boxes.
-for each face, crop the image to the face, generate the face embeddings with M2, and match the face embeddings to a person's name with M3.
-output a list of names of people detected in the image and the bounding boxes of their faces.
+For each image in the testing dataset, detect face(s) in image with M1 and get their bounding boxes.
+For each face, crop the image to the face, generate the face embeddings with M2, and match the face embeddings to a person's name with M3.
+Output the name of the person detected in the image and the bounding boxes of their face.
 compute how many of the faces were predicted correctly by comparing the outputs to the labels
 
 production pipeline:
-when a new image arrives from the video cameras that might have a face, transfer it to the DGX and use M2 to find faces, if any exist, and if so, run M3 on the cropped image to recognize the names corresponding to the faces.
+When a new image arrives from the video cameras that might have a face, transfer it to the DGX and use M2 to find faces, if any exist, and if so, run M3 on the cropped image to recognize the names corresponding to the faces. Show a feed displaying the bounding boxes, predicted names, and confidences with each frame.
+To increase the fps, batching may be implemented, so that the models operate on a batch of images and the display is delayed a few frames.
 
-updating dataset: Each time a new person is added to the face recognition system, we need to run M1 and M2 on the new images then retrain M3.
-
-==========
-
-Develop a pipeline to integrate with the reception face database. 
+updating dataset:
+Each time a new person is added to the face recognition system, we need to run M1 and M2 on the new images then retrain M3.
 
 
