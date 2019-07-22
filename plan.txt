@@ -72,6 +72,8 @@ For each image in the testing dataset, detect face(s) in image with M1 and get t
 Production Pipeline:
 When a new image arrives from the video cameras that might have a face, transfer it to the DGX and use M2 to find faces, if any exist, and if so, run M3 on the cropped image to recognize the names corresponding to the faces. Show a feed displaying the bounding boxes, predicted names, and confidences with each frame. To increase the fps, batching may be implemented, so that the models operate on a batch of images and the display is delayed a few frames.
 
+The previous interns have implemented this with a cascade classifier. You'll need to switch this to the face detector neural network. You'll also have to load the face embeddings generator with Pytorch rather than OpenCV and implement GPU acceleration using the DGX. Read the code in recognize_test.py to get an idea of what needs to be changed and rewrite face_detect.py.
+
 Updating Dataset:
 Each time a new person is added to the face recognition system, we need to run M1 and M2 on the new images then retrain M3.
 
