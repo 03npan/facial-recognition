@@ -10,6 +10,7 @@ import torch
 import net
 import dlib
 from align_dlib import AlignDlib
+import time
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 batch_size = 16
@@ -158,10 +159,16 @@ def recognize_batch(image_files, le, recognizer, detector,
         blob = create_face_blob(image_files[i], face_cascade, detector, face_aligner)
         if blob is not None:
             blobArray[i] = blob
+    start = time.time()
     inputs = torch.from_numpy(blobArray).to(device)
     vec = embedder.forward(inputs).cpu().numpy()
+    end = time.time()
+    print("embedder: " + str(end-start))
+    start = time.time()
     # perform classification to recognize the face
     predsArray = recognizer.predict_proba(vec)
+    end = time.time()
+    print("recognizer: " + str(end-start))
     names = []
     for i in range(len(image_files)):
         names.append(find_predictions(predsArray[i], confidence, le))
