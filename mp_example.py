@@ -1,10 +1,6 @@
 from multiprocessing import Process, Queue
 import time
 
-def f(q):
-    q.put([42, None, 'hello'])
-
-
 
 def pull_from_queue(q, frame_length):
     target_time = time.monotonic()
