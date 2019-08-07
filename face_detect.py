@@ -12,10 +12,10 @@ import imutils
 import argparse
 import os
 
-ip = "192.168.1.109"
+ip = "192.168.1.108"
 port = "80"
 username = "admin"
-password = "internsarethebest"
+password = "internsarethebest1"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
