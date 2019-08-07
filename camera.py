@@ -3,11 +3,13 @@ import time
 import numpy as np
 import amcrest
 
-from config import *
-
 speed = 8
 fps = 30
 
+ip = "192.168.1.109"
+port = "80"
+username = "admin"
+password = "internsarethebest"
 url = "rtsp://" + username + ":" + password + "@" + ip + ":" + port + "/cam/realmonitor?channel=1&subtype=0"
 cam = amcrest.AmcrestCamera(ip, port, username, password).camera
 moved = False
