@@ -73,27 +73,26 @@ def main():
             # resize it to have a width of 600 pixels (while
             # maintaining the aspect ratio) 
             image = imutils.resize(frame, width=600)
-            blob, box = create_face_blob(frame, detector, face_aligner)
-            if blob is None:
+            boxes = create_face_blob(frame, detector, face_aligner)
+            if len(boxes) == 0:
                 continue
-            (x, y, endX, endY) = box.astype("int")
             recognized = []
-
-            inputs = torch.from_numpy(blob).to(device)
+            
+            inputs = torch.from_numpy(blobArray[0:len(boxes)]).to(device)
             vec = embedder.forward(inputs).cpu().numpy()
             # perform classification to recognize the face
-            preds = recognizer.predict_proba(vec)
+            predsArray = recognizer.predict_proba(vec)
             detect_timer = 3
+            for i in range(len(boxes)):
+                (x, y, endX, endY) = boxes[i].astype("int")
+                proba, name = find_predictions(predsArray[i], le)
+                if proba > args["confidence"]:
+                    text = "{}: {:.2f}%".format("Unknown", proba * 100)
+                else:
+                    text = "{}: {:.2f}%".format(name, proba * 100)
+                recognized.append((x, y, endX, endY, text))
 
-            j = np.argmax(preds)
-            proba = preds[0, j]
-            name = le.classes_[j]
-            if proba*100 < 40:
-                text = "{}: {:.2f}%".format("Unknown", proba * 100)
-            else:
-                text = "{}: {:.2f}%".format(name, proba * 100)
-            recognized.append((x, y, endX, endY, text))
-
+        print(recognized)
         for face in recognized:
             cv.rectangle(frame, face[:2], face[2:4], (255,255,0), 2)  
             cv.putText(frame, face[4], face[:2], cv.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 255), 2)
@@ -107,8 +106,19 @@ def main():
 
     cv.destroyAllWindows()
 
+def find_predictions(preds, le):
+    j = np.argmax(preds)
+    proba = preds[j]
+    print(proba)
+    return proba, le.classes_[j]
+
+
+max_faces = 20
+blobArray = np.zeros((max_faces, 3, 96, 96), dtype=np.float32)
 
 def create_face_blob(image, detector, face_aligner):
+    blobArray[:] = 0
+    boxes = []
     # grab the image dimensions
     (ih, iw) = image.shape[:2]
     # construct a blob from the image
@@ -120,20 +130,20 @@ def create_face_blob(image, detector, face_aligner):
     # faces in the input image
     detector.setInput(imageBlob)
     detections = detector.forward()
-
-    # extract the confidence (i.e., probability) associated with the
-    # first prediction
-    confidence = detections[0, 0, 0, 2]
-
-    min_confidence = 0.6
-    # filter out weak detections
-    if confidence > min_confidence:
+    min_confidence = 0.45
+    for i in range(min(detections.shape[2], max_faces)): 
+        # extract the confidence (i.e., probability) associated with the
+        # predictions
+        confidence = detections[0, 0, i, 2]
+        if confidence < min_confidence:
+            break
         # compute the (x, y)-coordinates of the bounding box for the
         # face
-        box = detections[0, 0, 0, 3:7] * np.array([iw, ih, iw, ih])
+        box = detections[0, 0, i, 3:7] * np.array([iw, ih, iw, ih])
         (startX, startY, endX, endY) = box.astype("int")
         if startX < 0 or startY < 0 or endX > iw or endY > ih:
-            return None, None
+            continue
+
 
         # align the face
         rect = dlib.rectangle(startX, startY, endX, endY)
@@ -147,12 +157,11 @@ def create_face_blob(image, detector, face_aligner):
         # construct a blob for the face ROI, then pass the blob
         # through our face embedding model to obtain the 128-d
         # quantification of the face
-        faceBlob = cv.dnn.blobFromImage(face, 1.0 / 255, (96, 96),
-                                         (0, 0, 0), swapRB=True, crop=False)
-        return faceBlob, box
-    else:
-        return None, None
+        blobArray[i] = cv.dnn.blobFromImage(face, 1.0 / 255, (96, 96),
+                (0, 0, 0), swapRB=True, crop=False)
+        boxes.append(box)
 
+    return boxes
 
 
 if __name__ == '__main__':
