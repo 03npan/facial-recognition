@@ -32,9 +32,9 @@ while True:
     if key == ord('q'):
         break
 ###  for adding photos MAKE SURE THE PATH IS CORRECT FOR THE PERSON
-  #  if key == ord(' '):
-     #   cam.snapshot(path_file="unprocessed_dataset/Alex_Valente/%d.jpg"%(test))
-     #   test=test+1
+    if key == ord(' '):
+        cam.snapshot(path_file="unprocessed_dataset/William_Howe/%d.jpg"%(test))
+        test=test+1
     elif key == ord('w'):
         move("Up")
         time.sleep(0.5)
