@@ -3,14 +3,14 @@ import time
 import numpy as np
 import amcrest
 import time
-
+test=1
 speed = 1
 fps = 30
 
-ip = "192.168.1.109"
+ip = "192.168.1.108"
 port = "80"
 username = "admin"
-password = "internsarethebest"
+password = "internsarethebest1"
 url = "rtsp://" + username + ":" + password + "@" + ip + ":" + port + "/cam/realmonitor?channel=1&subtype=0"
 cam = amcrest.AmcrestCamera(ip, port, username, password).camera
 moved = False
@@ -31,6 +31,10 @@ while True:
     
     if key == ord('q'):
         break
+###  for adding photos MAKE SURE THE PATH IS CORRECT FOR THE PERSON
+  #  if key == ord(' '):
+     #   cam.snapshot(path_file="unprocessed_dataset/Alex_Valente/%d.jpg"%(test))
+     #   test=test+1
     elif key == ord('w'):
         move("Up")
         time.sleep(0.5)
