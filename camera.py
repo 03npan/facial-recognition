@@ -2,8 +2,9 @@ import cv2 as cv
 import time
 import numpy as np
 import amcrest
+import time
 
-speed = 8
+speed = 1
 fps = 30
 
 ip = "192.168.1.109"
@@ -13,7 +14,7 @@ password = "internsarethebest"
 url = "rtsp://" + username + ":" + password + "@" + ip + ":" + port + "/cam/realmonitor?channel=1&subtype=0"
 cam = amcrest.AmcrestCamera(ip, port, username, password).camera
 moved = False
-
+speed=1
 video = cv.VideoCapture(url)
 
 
@@ -32,21 +33,33 @@ while True:
         break
     elif key == ord('w'):
         move("Up")
+        time.sleep(0.5)
+        cam.ptz_control_command(action="stop", code="Up", arg1=0, arg2=speed, arg3=0)
     elif key == ord('a'):
         move("Left")
+        time.sleep(0.5)
+        cam.ptz_control_command(action="stop", code="Left", arg1=0, arg2=speed, arg3=0)
     elif key == ord('s'):
         move("Down")
+        time.sleep(0.5)
+        cam.ptz_control_command(action="stop", code="Down", arg1=0, arg2=speed, arg3=0)
     elif key == ord('d'):
         move("Right")
+        time.sleep(0.5)
+        cam.ptz_control_command(action="stop", code="Right", arg1=0, arg2=speed, arg3=0)
     elif key == ord('+'):
-        break
+        cam.zoom_in(action="start")
+        time.sleep(0.5)
+        cam.zoom_in(action="stop")
     elif key == ord('-'):
-        break
-    elif moved:
-        moved = False
-        cam.ptz_control_command(action="stop", code="Up", arg1=0, arg2=0, arg3=0)
-        cam.ptz_control_command(action="stop", code="Down", arg1=0, arg2=0, arg3=0)
-        cam.ptz_control_command(action="stop", code="Left", arg1=0, arg2=0, arg3=0)
-        cam.ptz_control_command(action="stop", code="Right", arg1=0, arg2=0, arg3=0)
- 
+        cam.zoom_out(action="start")
+        time.sleep(0.5)
+        cam.zoom_out(action="stop")
+   # elif moved:
+  #      moved = False
+   #     cam.ptz_control_command(action="stop", code="Up", arg1=0, arg2=0, arg3=0)
+    #    cam.ptz_control_command(action="stop", code="Down", arg1=0, arg2=0, arg3=0)
+     #   cam.ptz_control_command(action="stop", code="Left", arg1=0, arg2=0, arg3=0)
+     #   cam.ptz_control_command(action="stop", code="Right", arg1=0, arg2=0, arg3=0)
+
 cv.destroyAllWindows()

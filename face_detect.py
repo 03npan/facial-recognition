@@ -17,8 +17,10 @@ port = "80"
 username = "admin"
 password = "internsarethebest1"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
+cam = amcrest.AmcrestCamera(ip, port, username, password).camera
+speed=1
+def move(dir): 
+    cam.ptz_control_command(action="start", code=dir, arg1=0, arg2=speed, arg3=0)
 def main():
     # construct the argument parser and parse the arguments
     ap = argparse.ArgumentParser()
@@ -68,6 +70,33 @@ def main():
 
     while True:
         _, frame = video.read()
+        key = cv.waitKey(1) & 0xFF
+        if key == ord('q'):
+            break
+        elif key == ord('w'):
+            move("Up")
+            time.sleep(0.5)
+            cam.ptz_control_command(action="stop", code="Up", arg1=0, arg2=speed, arg3=0)
+        elif key == ord('a'):
+            move("Left")
+            time.sleep(0.5)
+            cam.ptz_control_command(action="stop", code="Left", arg1=0, arg2=speed, arg3=0)
+        elif key == ord('s'):
+            move("Down")
+            time.sleep(0.5)
+            cam.ptz_control_command(action="stop", code="Down", arg1=0, arg2=speed, arg3=0)
+        elif key == ord('d'):
+            move("Right")
+            time.sleep(0.5)
+            cam.ptz_control_command(action="stop", code="Right", arg1=0, arg2=speed, arg3=0)
+        elif key == ord('+'):
+            cam.zoom_in(action="start")
+            time.sleep(0.5)
+            cam.zoom_in(action="stop")
+        elif key == ord('-'):
+            cam.zoom_out(action="start")
+            time.sleep(0.5)
+            cam.zoom_out(action="stop")
 
         if detect_timer == 0:
             # resize it to have a width of 600 pixels (while
