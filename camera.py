@@ -30,11 +30,30 @@ while True:
     key = cv.waitKey(1) & 0xFF
     
     if key == ord('q'):
-        break
+        cam.move_left_up(action='start')
+        time.sleep(0.5)
+        cam.move_left_up(action='stop')
 ###  for adding photos MAKE SURE THE PATH IS CORRECT FOR THE PERSON
-    if key == ord(' '):
-        cam.snapshot(path_file="unprocessed_dataset/William_Howe/%d.jpg"%(test))
-        test=test+1
+   # if key == ord(' '):
+    #    cam.snapshot(path_file="unprocessed_dataset/William_Howe/%d.jpg"%(test))
+     #   test=test+1
+    elif key == ord('e'):
+        cam.move_right_up(action='start')
+        time.sleep(0.5)
+        cam.move_right_up(action='stop')
+#broken command   
+# elif key == ord('r'):
+    #    cam.iris_small(action='start')
+    #    time.sleep(0.5)
+    #    cam.iris_small(action='stop')
+    elif key == ord('c'):
+        cam.move_right_down(action='start')
+        time.sleep(0.5)
+        cam.move_right_down(action='stop')
+    elif key == ord('z'):
+        cam.move_left_down(action='start')
+        time.sleep(0.5)
+        cam.move_left_down(action='stop')
     elif key == ord('w'):
         move("Up")
         time.sleep(0.5)
@@ -43,7 +62,7 @@ while True:
         move("Left")
         time.sleep(0.5)
         cam.ptz_control_command(action="stop", code="Left", arg1=0, arg2=speed, arg3=0)
-    elif key == ord('s'):
+    elif key == ord('x'):
         move("Down")
         time.sleep(0.5)
         cam.ptz_control_command(action="stop", code="Down", arg1=0, arg2=speed, arg3=0)
