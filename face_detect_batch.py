@@ -115,7 +115,7 @@ def main():
             for i in range(len(boxes)):
                 (x, y, endX, endY) = boxes[i].astype("int")
                 proba, name = find_predictions(predsArray[i], le)
-                if proba < args["confidence"]:
+                if proba > args["confidence"]:
                     text = "{}: {:.2f}%".format("Unknown", proba * 100)
                 else:
                     text = "{}: {:.2f}%".format(name, proba * 100)
