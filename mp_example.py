@@ -5,6 +5,7 @@ import torch
 import amcrest
 import numpy as np
 import sys
+import imutils
 
 ip = "192.168.8.9"
 port = "80"
@@ -15,21 +16,15 @@ cam = amcrest.AmcrestCamera(ip, port, username, password).camera
 speed=1
 batch_size=16
 
-image_blob_array = np.zeros((batch_size, 3, 300, 300), dtype=np.float32)
-
-
 def process_frames(fq, pq, frame_length):
     while True:
-        frame_list = []
         start = time.monotonic()
-        
+        frame_list = []       
         for i in range(batch_size):
             frame = fq.get()
-            image_blob_array[i] = cv.dnn.blobFromImage(
-                cv.resize(frame, (300, 300)), 1.0, (300, 300),
-                (104.0, 177.0, 123.0), swapRB=False, crop=False)
+            frame_list.append(frame)
         for i in range(batch_size):
-            pq.put(image_blob_array[i])
+            pq.put(frame_list[i])
         end = time.monotonic()
         print(end - start)
         print(fq.qsize(), pq.qsize())
@@ -44,6 +39,7 @@ def display_processed_frames(pq, frame_length):
         if key == ord('q'):
             cv.destroyAllWindows()
             sys.exit(0)
+        time.sleep(max(0, frame_length - (end - start)))
     
 
 if __name__ == '__main__':
@@ -52,7 +48,7 @@ if __name__ == '__main__':
     
     fq = Queue()
     pq = Queue()
-    frame_length = 1/30.0
+    frame_length = 1/60.0
     pf = Process(target=process_frames, args=(fq, pq, frame_length))
     pf.start()
     dpf = Process(target=display_processed_frames, args=(pq, frame_length))
@@ -61,5 +57,6 @@ if __name__ == '__main__':
     while True:
         start = time.monotonic()
         _, frame = video.read()
+        frame = imutils.resize(frame, width=800)
         fq.put(frame)
         end = time.monotonic()
