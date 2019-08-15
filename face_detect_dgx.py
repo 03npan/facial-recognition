@@ -44,7 +44,7 @@ def main():
 
     fq = Queue()
     pq = Queue()
-    frame_length = 1/120.0
+    frame_length = 1/60.0
     pf = Process(target=get_frames, args=(fq,))
     pf.start()
     dpf = Process(target=display_processed_frames, args=(pq, frame_length))
@@ -56,7 +56,7 @@ def get_frames(fq):
     video = cv.VideoCapture(url)
     i = 0
     while True:
-        if True: #i % 1 == 0:
+        if i % 3 == 0:
             _, frame = video.read()
             frame = imutils.resize(frame, width=800)
             fq.put(frame)
