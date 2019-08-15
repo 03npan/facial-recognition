@@ -20,7 +20,7 @@ password = "internsarethebest1"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 cam = amcrest.AmcrestCamera(ip, port, username, password).camera
 speed=1
-batch_size=1
+batch_size=32
 
 def main():
     # construct the argument parser and parse the arguments
@@ -81,7 +81,8 @@ def batch_process(frame_list, detector, face_aligner, embedder, recognizer, le, 
     vec = embedder.forward(inputs).cpu().numpy()
     # perform classification to recognize the face
     predsArray = recognizer.predict_proba(vec)
-    print("boxes: " + str(boxes))
+    #index_list = [index_list[-1]] + index_list[:-1]
+    #index_list.reverse()
     for i in range(len(boxes)):
         (x, y, endX, endY) = boxes[i].astype("int")
         proba, name = find_predictions(predsArray[i], le)
@@ -90,7 +91,6 @@ def batch_process(frame_list, detector, face_aligner, embedder, recognizer, le, 
         else:
             text = "{}: {:.2f}%".format(name, proba * 100)
         recognized.append((x, y, endX, endY, text, index_list[i]))
-    print(index_list)
     for face in recognized:
         cv.rectangle(frame_list[face[5]], face[:2], face[2:4], (255,255,0), 2)  
         cv.putText(frame_list[face[5]], face[4], face[:2], cv.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 255), 2)
@@ -129,8 +129,6 @@ def process_frames(fq, pq, args):
         for i in range(batch_size):
             pq.put(frame_list[i])
         end = time.monotonic()
-        print("calc time: " + str(end - start))
-        print(fq.qsize(), pq.qsize())
 
 def display_processed_frames(pq, frame_length):
     while True:
@@ -147,7 +145,6 @@ def display_processed_frames(pq, frame_length):
 def find_predictions(preds, le):
     j = np.argmax(preds)
     proba = preds[j]
-    print(proba)
     return proba, le.classes_[j]
 
 max_faces = 20
@@ -163,7 +160,6 @@ def create_face_blob(frame_list, image_blob_array, detector, face_aligner, iw, i
     # faces in the input image
     detector.setInput(image_blob_array)
     detections = detector.forward()
-    print(detections.shape)
     min_confidence = 0.45
     j = 0
     for i in range(detections.shape[2]): 
@@ -188,7 +184,6 @@ def create_face_blob(frame_list, image_blob_array, detector, face_aligner, iw, i
                 rect,
                 landmarkIndices=AlignDlib.OUTER_EYES_AND_NOSE
         )
-        j += 1
         index_list.append(frame_index)
         # construct a blob for the face ROI, then pass the blob
         # through our face embedding model to obtain the 128-d
@@ -196,6 +191,7 @@ def create_face_blob(frame_list, image_blob_array, detector, face_aligner, iw, i
         blobArray[j] = cv.dnn.blobFromImage(face, 1.0 / 255, (96, 96),
                 (0, 0, 0), swapRB=True, crop=False)
         boxes.append(box)
+        j += 1
     
     return boxes, index_list
 
