@@ -19,8 +19,8 @@ password = "internsarethebest1"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 cam = amcrest.AmcrestCamera(ip, port, username, password).camera
 speed=1
-def move(dir): 
-    cam.ptz_control_command(action="start", code=dir, arg1=0, arg2=speed, arg3=0)
+batch_size=16
+
 def main():
     # construct the argument parser and parse the arguments
     ap = argparse.ArgumentParser()
@@ -63,84 +63,79 @@ def main():
     recognizer = pickle.loads(open(args["recognizer"], "rb").read())
     le = pickle.loads(open(args["le"], "rb").read())
 
-    detect_timer = 3
+    
 
-    faces = []
-    recognized = []
-
+    fq = Queue()
+    pq = Queue()
+    frame_length = 1/60.0
+    pf = Process(target=process_frames, args=(fq, pq, detector, face_aligner, 
+        embedder, recognizer, le))
+    pf.start()
+    dpf = Process(target=display_processed_frames, args=(pq, frame_length))
+    dpf.start()
+    
     while True:
         _, frame = video.read()
+        frame = imutils.resize(frame, width=800)
+        fq.put(frame)
+
+def batch_process(frame_list, detector, face_aligner, embedder, recognizer, le):
+    for frame in frame_list:
+        boxes = create_face_blob(frame, detector, face_aligner)
+        if len(boxes) == 0:
+            continue
+        recognized = []
+        
+        inputs = torch.from_numpy(blobArray[0:len(boxes)]).to(device)
+        vec = embedder.forward(inputs).cpu().numpy()
+        # perform classification to recognize the face
+        predsArray = recognizer.predict_proba(vec)
+        detect_timer = 3
+        for i in range(len(boxes)):
+            (x, y, endX, endY) = boxes[i].astype("int")
+            proba, name = find_predictions(predsArray[i], le)
+            if proba > args["confidence"]:
+                text = "{}: {:.2f}%".format("Unknown", proba * 100)
+            else:
+                text = "{}: {:.2f}%".format(name, proba * 100)
+            recognized.append((x, y, endX, endY, text))
+
+    for face in recognized:
+        cv.rectangle(frame, face[:2], face[2:4], (255,255,0), 2)  
+        cv.putText(frame, face[4], face[:2], cv.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 255), 2)
+
+def process_frames(fq, pq, detector, face_aligner, 
+        embedder, recognizer, le):
+    while True:
+        start = time.monotonic()
+        frame_list = []       
+        for i in range(batch_size):
+            frame = fq.get()
+            frame_list.append(frame)
+        batch_process(frame_list, detector, face_aligner, embedder, recognizer, le)
+        for i in range(batch_size):
+            pq.put(frame_list[i])
+        end = time.monotonic()
+        print(end - start)
+        print(fq.qsize(), pq.qsize())
+
+def display_processed_frames(pq, frame_length):
+    while True:
+        start = time.monotonic()
+        frame = pq.get()
+        cv.imshow(('Camera'), frame)
+        end = time.monotonic()
         key = cv.waitKey(1) & 0xFF
         if key == ord('q'):
-            break
-        elif key == ord('w'):
-            move("Up")
-            time.sleep(0.5)
-            cam.ptz_control_command(action="stop", code="Up", arg1=0, arg2=speed, arg3=0)
-        elif key == ord('a'):
-            move("Left")
-            time.sleep(0.5)
-            cam.ptz_control_command(action="stop", code="Left", arg1=0, arg2=speed, arg3=0)
-        elif key == ord('s'):
-            move("Down")
-            time.sleep(0.5)
-            cam.ptz_control_command(action="stop", code="Down", arg1=0, arg2=speed, arg3=0)
-        elif key == ord('d'):
-            move("Right")
-            time.sleep(0.5)
-            cam.ptz_control_command(action="stop", code="Right", arg1=0, arg2=speed, arg3=0)
-        elif key == ord('+'):
-            cam.zoom_in(action="start")
-            time.sleep(0.5)
-            cam.zoom_in(action="stop")
-        elif key == ord('-'):
-            cam.zoom_out(action="start")
-            time.sleep(0.5)
-            cam.zoom_out(action="stop")
-
-        if detect_timer == 0:
-            # resize it to have a width of 600 pixels (while
-            # maintaining the aspect ratio) 
-            image = imutils.resize(frame, width=600)
-            boxes = create_face_blob(frame, detector, face_aligner)
-            if len(boxes) == 0:
-                continue
-            recognized = []
-            
-            inputs = torch.from_numpy(blobArray[0:len(boxes)]).to(device)
-            vec = embedder.forward(inputs).cpu().numpy()
-            # perform classification to recognize the face
-            predsArray = recognizer.predict_proba(vec)
-            detect_timer = 3
-            for i in range(len(boxes)):
-                (x, y, endX, endY) = boxes[i].astype("int")
-                proba, name = find_predictions(predsArray[i], le)
-                if proba > args["confidence"]:
-                    text = "{}: {:.2f}%".format("Unknown", proba * 100)
-                else:
-                    text = "{}: {:.2f}%".format(name, proba * 100)
-                recognized.append((x, y, endX, endY, text))
-
-        print(recognized)
-        for face in recognized:
-            cv.rectangle(frame, face[:2], face[2:4], (255,255,0), 2)  
-            cv.putText(frame, face[4], face[:2], cv.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 255), 2)
-
-        cv.imshow(('Camera'), frame)
-
-        key = cv.waitKey(1) & 0xff 
-        if key == ord('q'):
-             break
-        detect_timer -= 1
-
-    cv.destroyAllWindows()
+            cv.destroyAllWindows()
+            sys.exit(0)
+        time.sleep(max(0, frame_length - (end - start)))
 
 def find_predictions(preds, le):
     j = np.argmax(preds)
     proba = preds[j]
     print(proba)
     return proba, le.classes_[j]
-
 
 max_faces = 20
 blobArray = np.zeros((max_faces, 3, 96, 96), dtype=np.float32)
