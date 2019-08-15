@@ -20,7 +20,7 @@ password = "internsarethebest1"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 cam = amcrest.AmcrestCamera(ip, port, username, password).camera
 speed=1
-batch_size=1
+batch_size=2
 
 def main():
     # construct the argument parser and parse the arguments
@@ -71,25 +71,24 @@ def batch_process(frame_list, detector, face_aligner, embedder, recognizer, le, 
         image_blob_array[i] = cv.dnn.blobFromImage(
             cv.resize(frame, (300, 300)), 1.0, (300, 300),
             (104.0, 177.0, 123.0), swapRB=False, crop=False)
+    
 
-
-    boxes, index_list = create_face_blob(frame_list, image_blob_array, detector, face_aligner, iw, ih)
-    if len(boxes) == 0:
-        return
-
-    inputs = torch.from_numpy(blobArray[0:len(boxes)]).to(device)
-    vec = embedder.forward(inputs).cpu().numpy()
-    # perform classification to recognize the face
-    predsArray = recognizer.predict_proba(vec)
-    print("boxes: " + str(boxes))
-    for i in range(len(boxes)):
-        (x, y, endX, endY) = boxes[i].astype("int")
-        proba, name = find_predictions(predsArray[i], le)
-        if proba < args["confidence"]:
-            text = "{}: {:.2f}%".format("Unknown", proba * 100)
-        else:
-            text = "{}: {:.2f}%".format(name, proba * 100)
-        recognized.append((x, y, endX, endY, text, index_list[i]))
+        boxes, index_list = create_face_blob(frame_list, image_blob_array, detector, face_aligner, iw, ih)
+        if len(boxes) == 0:
+            continue
+        
+        inputs = torch.from_numpy(blobArray[0:len(boxes)]).to(device)
+        vec = embedder.forward(inputs).cpu().numpy()
+        # perform classification to recognize the face
+        predsArray = recognizer.predict_proba(vec)
+        for i in range(len(boxes)):
+            (x, y, endX, endY) = boxes[i].astype("int")
+            proba, name = find_predictions(predsArray[i], le)
+            if proba < args["confidence"]:
+                text = "{}: {:.2f}%".format("Unknown", proba * 100)
+            else:
+                text = "{}: {:.2f}%".format(name, proba * 100)
+            recognized.append((x, y, endX, endY, text, index_list[i]))
     print(index_list)
     for face in recognized:
         cv.rectangle(frame_list[face[5]], face[:2], face[2:4], (255,255,0), 2)  
@@ -196,7 +195,7 @@ def create_face_blob(frame_list, image_blob_array, detector, face_aligner, iw, i
         blobArray[j] = cv.dnn.blobFromImage(face, 1.0 / 255, (96, 96),
                 (0, 0, 0), swapRB=True, crop=False)
         boxes.append(box)
-    
+
     return boxes, index_list
 
 
