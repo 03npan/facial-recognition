@@ -76,7 +76,6 @@ for (i, imagePath) in enumerate(imagePaths):
     # maintaining the aspect ratio), and then grab the image
     # dimensions
     image = cv2.imread(imagePath)
-    image = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
     image = imutils.resize(image, width=600)
     (ih, iw) = image.shape[:2]
     imageBlob = cv2.dnn.blobFromImage(

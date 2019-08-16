@@ -4,96 +4,194 @@ import time
 import numpy as np
 import pickle
 import amcrest
+import torch
+import net
+import dlib
+from align_dlib import AlignDlib
+import imutils
+import argparse
+import os
 
-from config import *
-
-url = "rtsp://" + username + ":" + password + "@" + ip + ":" + port + "/cam/realmonitor?channel=1&subtype=0"
+ip = "192.168.8.9"
+port = "80"
+username = "admin"
+password = "internsarethebest1"
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 cam = amcrest.AmcrestCamera(ip, port, username, password).camera
+speed=1
+def move(dir): 
+    cam.ptz_control_command(action="start", code=dir, arg1=0, arg2=speed, arg3=0)
+def main():
+    # construct the argument parser and parse the arguments
+    ap = argparse.ArgumentParser()
+    ap.add_argument("-m", "--embedding-model", default="net.pth",
+                    help="path to the deep learning face embedding model")
+    ap.add_argument("-r", "--recognizer", default="output/recognizer.pickle",
+                    help="path to model trained to recognize faces")
+    ap.add_argument("-l", "--le", default="output/le.pickle",
+                    help="path to label encoder")
+    ap.add_argument("-c", "--confidence", type=float, default=0.45,
+                    help="minimum probability to filter weak detections")
+    ap.add_argument("-d", "--detector", default="face_detection_model",
+                    help="path to OpenCV's deep learning face detector")
 
-video = cv.VideoCapture(url)
-face_cascade = cv.CascadeClassifier()
+    args = vars(ap.parse_args())
+    url = "rtsp://" + username + ":" + password + "@" + ip + ":" + port + "/cam/realmonitor?channel=1&subtype=0"
+    video = cv.VideoCapture(url)
 
 
-if not face_cascade.load(cv.data.haarcascades + "haarcascade_frontalface_default.xml"):
-    print('[!] Error loading face cascade')
-    exit(0)
+    print("[INFO] loading face detector...")
+    protoPath = os.path.sep.join([args["detector"], "deploy.prototxt"])
+    modelPath = os.path.sep.join([args["detector"],
+                                  "res10_300x300_ssd_iter_140000.caffemodel"])
+    detector = cv.dnn.readNetFromCaffe(protoPath, modelPath)
 
-# load our serialized face embedding model from disk
-print("[INFO] loading face recognizer...")
-embedder = cv.dnn.readNetFromTorch(EMBEDDING_PATH)
+    # You can download the required pre-trained face detection model here:
+    # http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2
+    predictor_model = "shape_predictor_68_face_landmarks.dat"
+    face_aligner = AlignDlib(predictor_model)
 
-# load the actual face recognition model along with the label encoder
-recognizer = pickle.loads(open(RECOGNIZER_PATH, "rb").read())
-le = pickle.loads(open(LABEL_ENCODER_PATH, "rb").read())
+    # load our serialized face embedding model from disk
+    print("[INFO] loading face recognizer...")
+    torch.set_grad_enabled(False)
+    embedder = net.model
+    embedder.load_state_dict(torch.load('net.pth'))
+    embedder.to(device)
+    embedder.eval()
 
-detect_timer = 10
+    # load the actual face recognition model along with the label encoder
+    recognizer = pickle.loads(open(args["recognizer"], "rb").read())
+    le = pickle.loads(open(args["le"], "rb").read())
 
-faces = []
-recognized = []
+    detect_timer = 3
 
-# Check optimization
-print("[i] Checking optimization: " + str(cv.useOptimized()))
+    faces = []
+    recognized = []
 
-while True:
-    _, frame = video.read()
+    while True:
+        _, frame = video.read()
+        key = cv.waitKey(1) & 0xFF
+        if key == ord('q'):
+            break
+        elif key == ord('w'):
+            move("Up")
+            time.sleep(0.5)
+            cam.ptz_control_command(action="stop", code="Up", arg1=0, arg2=speed, arg3=0)
+        elif key == ord('a'):
+            move("Left")
+            time.sleep(0.5)
+            cam.ptz_control_command(action="stop", code="Left", arg1=0, arg2=speed, arg3=0)
+        elif key == ord('s'):
+            move("Down")
+            time.sleep(0.5)
+            cam.ptz_control_command(action="stop", code="Down", arg1=0, arg2=speed, arg3=0)
+        elif key == ord('d'):
+            move("Right")
+            time.sleep(0.5)
+            cam.ptz_control_command(action="stop", code="Right", arg1=0, arg2=speed, arg3=0)
+        elif key == ord('+'):
+            cam.zoom_in(action="start")
+            time.sleep(0.5)
+            cam.zoom_in(action="stop")
+        elif key == ord('-'):
+            cam.zoom_out(action="start")
+            time.sleep(0.5)
+            cam.zoom_out(action="stop")
 
-    if detect_timer == 0:
-        gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-        faces = face_cascade.detectMultiScale(gray, 1.3, 5) 
-        recognized = []
-
-        detect_timer = 10
-
-        for i, (x,y,w,h) in enumerate(faces): 
-            endX = x + w
-            endY = y + h
-
-            face = frame[y:endY, x:endX]
-            (fH, fW) = face.shape[:2]
-
-            if fW < 20 or fH < 20:
+        if detect_timer == 0:
+            # resize it to have a width of 600 pixels (while
+            # maintaining the aspect ratio) 
+            image = imutils.resize(frame, width=600)
+            boxes = create_face_blob(frame, detector, face_aligner)
+            if len(boxes) == 0:
                 continue
+            recognized = []
+            
+            inputs = torch.from_numpy(blobArray[0:len(boxes)]).to(device)
+            vec = embedder.forward(inputs).cpu().numpy()
+            # perform classification to recognize the face
+            predsArray = recognizer.predict_proba(vec)
+            detect_timer = 3
+            for i in range(len(boxes)):
+                (x, y, endX, endY) = boxes[i].astype("int")
+                proba, name = find_predictions(predsArray[i], le)
+                if proba < args["confidence"]:
+                    text = "{}: {:.2f}%".format("Unknown", proba * 100)
+                else:
+                    text = "{}: {:.2f}%".format(name, proba * 100)
+                recognized.append((x, y, endX, endY, text))
 
-            faceBlob = cv.dnn.blobFromImage(face, 1.0 / 255,(96, 96), (0, 0, 0), swapRB=True, crop=False)
-            embedder.setInput(faceBlob)
-            vec = embedder.forward()
+        print(recognized)
+        for face in recognized:
+            cv.rectangle(frame, face[:2], face[2:4], (255,255,0), 2)  
+            cv.putText(frame, face[4], face[:2], cv.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 255), 2)
 
-            preds = recognizer.predict_proba(vec)[0]
-            j = np.argmax(preds)
-            proba = preds[j]
-            name = le.classes_[j]
-            if proba*100 < 40:
-            	text = "{}: {:.2f}%".format("Unknown", proba * 100)
-            else:
-            	text = "{}: {:.2f}%".format(name, proba * 100)
-            recognized.append((x, y, endX, endY, text))
+        cv.imshow(('Camera'), frame)
 
-    for face in recognized:
-        cv.rectangle(frame, face[:2], face[2:4], (255,255,0), 2)  
-        cv.putText(frame, face[4], face[:2], cv.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 255), 2)
+        key = cv.waitKey(1) & 0xff 
+        if key == ord('q'):
+             break
+        detect_timer -= 1
 
-    cv.imshow(('Camera'), frame)
+    cv.destroyAllWindows()
 
-    key = cv.waitKey(1) & 0xff 
-    if key == ord('q'):
-         break
-#      elif key == ord('w'):
-#          cam.ptz_control_command(action="start", code="Up", arg1=0, arg2=0, arg3=0)
-#      elif key == ord('a'):
-#          cam.ptz_control_command(action="start", code="Left", arg1=0, arg2=0, arg3=0)
-#      elif key == ord('s'):
-#          cam.ptz_control_command(action="start", code="Down", arg1=0, arg2=0, arg3=0)
-#      elif key == ord('d'):
-#          cam.ptz_control_command(acti#on="start", code="Right", arg1=0, arg2=0, arg3=0)
-#      elif key == ord('+'):
-#          break
-#      elif key == ord('-'):
-#          break
-#      else:
-#          cam.ptz_control_command(action="stop", code="Up", arg1=0, arg2=0, arg3=0)
-#          cam.ptz_control_command(action="stop", code="Down", arg1=0, arg2=0, arg3=0)
-#          cam.ptz_control_command(action="stop", code="Left", arg1=0, arg2=0, arg3=0)
-#          cam.ptz_control_command(action="stop", code="Right", arg1=0, arg2=0, arg3=0)
-    detect_timer -= 1
+def find_predictions(preds, le):
+    j = np.argmax(preds)
+    proba = preds[j]
+    print(proba)
+    return proba, le.classes_[j]
 
-cv.destroyAllWindows()
+
+max_faces = 20
+blobArray = np.zeros((max_faces, 3, 96, 96), dtype=np.float32)
+
+def create_face_blob(image, detector, face_aligner):
+    blobArray[:] = 0
+    boxes = []
+    # grab the image dimensions
+    (ih, iw) = image.shape[:2]
+    # construct a blob from the image
+    imageBlob = cv.dnn.blobFromImage(
+        cv.resize(image, (300, 300)), 1.0, (300, 300),
+        (104.0, 177.0, 123.0), swapRB=False, crop=False)
+
+    # apply OpenCV's deep learning-based face detector to localize
+    # faces in the input image
+    detector.setInput(imageBlob)
+    detections = detector.forward()
+    min_confidence = 0.45
+    for i in range(min(detections.shape[2], max_faces)): 
+        # extract the confidence (i.e., probability) associated with the
+        # predictions
+        confidence = detections[0, 0, i, 2]
+        if confidence < min_confidence:
+            break
+        # compute the (x, y)-coordinates of the bounding box for the
+        # face
+        box = detections[0, 0, i, 3:7] * np.array([iw, ih, iw, ih])
+        (startX, startY, endX, endY) = box.astype("int")
+        if startX < 0 or startY < 0 or endX > iw or endY > ih:
+            continue
+
+
+        # align the face
+        rect = dlib.rectangle(startX, startY, endX, endY)
+        face = face_aligner.align(
+                96,
+                image,
+                rect,
+                landmarkIndices=AlignDlib.OUTER_EYES_AND_NOSE
+        )
+
+        # construct a blob for the face ROI, then pass the blob
+        # through our face embedding model to obtain the 128-d
+        # quantification of the face
+        blobArray[i] = cv.dnn.blobFromImage(face, 1.0 / 255, (96, 96),
+                (0, 0, 0), swapRB=True, crop=False)
+        boxes.append(box)
+
+    return boxes
+
+
+if __name__ == '__main__':
+    main()

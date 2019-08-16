@@ -103,7 +103,6 @@ def create_face_blob(image_file, face_cascade, detector, face_aligner):
     # maintaining the aspect ratio), and then grab the image dimensions
 
     image = cv2.imread(image_file)
-    image = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
     image = imutils.resize(image, width=600)
     (ih, iw) = image.shape[:2]
 

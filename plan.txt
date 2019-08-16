@@ -7,7 +7,7 @@ git clone https://github.com/stevengriffin/facial-recognition.git
 cd facial-recognition
 
 # Assuming Ubuntu or Debian
-sudo apt-get install python3-pip
+sudo apt-get install python3-pip cmake
 pip3 install --no-cache-dir -r requirements.txt
 
 ================
