@@ -44,7 +44,7 @@ def main():
 
     fq = Queue()
     pq = Queue()
-    frame_length = 1/60.0
+    frame_length = 1/45.0
     pf = Process(target=get_frames, args=(fq,))
     pf.start()
     dpf = Process(target=display_processed_frames, args=(pq, frame_length))
