@@ -7,7 +7,7 @@ test=1
 speed = 1
 fps = 30
 
-ip = "192.168.1.108"
+ip = "192.168.8.9"
 port = "80"
 username = "admin"
 password = "internsarethebest1"
